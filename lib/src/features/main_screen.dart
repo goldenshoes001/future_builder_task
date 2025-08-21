@@ -8,32 +8,69 @@ class MainScreen extends StatefulWidget {
 }
 
 class _MainScreenState extends State<MainScreen> {
+  TextEditingController plzController = TextEditingController();
+
+  Future<String?>? result;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: Center(
-          child: Column(
-            spacing: 32,
-            children: [
-              TextFormField(
-                decoration: InputDecoration(
-                  border: OutlineInputBorder(),
-                  labelText: "Postleitzahl",
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Center(
+            child: Column(
+              spacing: 32,
+              children: [
+                FutureBuilder<String?>(
+                  future: result,
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.none) {
+                      return Text(
+                        "Bitte eine PLZ suchen",
+                        style: Theme.of(context).textTheme.labelLarge,
+                      );
+                    }
+                    // Überprüfen, ob die Future auf das Ergebnis wartet
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const CircularProgressIndicator();
+                    } else if (snapshot.connectionState ==
+                        ConnectionState.done) {
+                      if (snapshot.hasError) {
+                        return Text(
+                          "Fehler: ${snapshot.error}",
+                          style: Theme.of(context).textTheme.labelLarge,
+                        );
+                      }
+                      // Zeige das Ergebnis an, wenn Daten vorhanden sind
+                      if (snapshot.hasData) {
+                        return Text(
+                          "Ergebnis: ${snapshot.data}",
+                          style: Theme.of(context).textTheme.labelLarge,
+                        );
+                      }
+                      // Standardfall, wenn nichts zutrifft
+                    }
+                    ;
+                    return Text(
+                      "Keine Daten verfügbar",
+                      style: Theme.of(context).textTheme.labelLarge,
+                    );
+                  },
                 ),
-              ),
-              OutlinedButton(
-                onPressed: () {
-                  // TODO: implementiere Suche
-                },
-                child: const Text("Suche"),
-              ),
-              Text(
-                "Ergebnis: Noch keine PLZ gesucht",
-                style: Theme.of(context).textTheme.labelLarge,
-              ),
-            ],
+                TextFormField(
+                  controller: plzController,
+                  decoration: InputDecoration(
+                    border: OutlineInputBorder(),
+                    labelText: "Postleitzahl",
+                  ),
+                ),
+                OutlinedButton(
+                  onPressed: searchCity,
+                  child: const Text("Suche"),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -65,5 +102,12 @@ class _MainScreenState extends State<MainScreen> {
       default:
         return 'Unbekannte Stadt';
     }
+  }
+
+  void searchCity() {
+    setState(() {
+      String plz = plzController.text;
+      result = getCityFromZip(plz);
+    });
   }
 }
